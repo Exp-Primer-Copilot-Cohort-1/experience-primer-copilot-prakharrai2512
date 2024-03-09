@@ -1,34 +1,48 @@
 //Create a web server
-var http = require('http');
-var fs = require('fs');
-var url = require('url');
-var path = require('path');
-var comments = require('./comments');
 
-//Create a server
-var server = http.createServer(function(req, res) {
-  //Parse the request containing file name
-  var pathname = url.parse(req.url).pathname;
-  //Print the name of the file for which request is made.
-  console.log("Request for " + pathname + " received.");
-  //Read the requested file content from file system
-  fs.readFile(pathname.substr(1), function(err, data) {
-    if (err) {
-      console.log(err);
-      //HTTP Status: 404 : NOT FOUND
-      //Content Type: text/plain
-      res.writeHead(404, {'Content-Type': 'text/html'});
-    } else {
-      //Page found
-      //HTTP Status: 200 : OK
-      //Content Type: text/plain
-      res.writeHead(200, {'Content-Type': 'text/html'});
-      //Write the content of the file to response body
-      res.write(data.toString());
-    }
-    //Send the response body
-    res.end();
-  });
-}).listen(8081);
+const express = require('express');
+const app = express();
+const path = require('path');
+const fs = require('fs');
+const bodyParser = require('body-parser');
+const port = 3000;
 
-console.log('Server running at http://')
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/comments', (req, res) => {
+    fs.readFile('comments.json', 'utf8', (err, data) => {
+        if (err) {
+            res.send('Error reading file');
+        } else {
+            res.send(data);
+        }
+    });
+});
+
+app.post('/comments', (req, res) => {
+    fs.readFile('comments.json', 'utf8', (err, data) => {
+        if (err) {
+            res.send('Error reading file');
+        } else {
+            const comments = JSON.parse(data);
+            comments.push(req.body);
+            fs.writeFile('comments.json', JSON.stringify(comments), (err) => {
+                if (err) {
+                    res.send('Error writing file');
+                } else {
+                    res.send('Comment added');
+                }
+            });
+        }
+    });
+});
+
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+});
